@@ -1,0 +1,39 @@
+{
+    "language": "Solidity",
+    "sources": {
+        "@chainlink/contracts/src/v0.8/interfaces/AggregatorV3Interface.sol": {
+            "content": "// SPDX-License-Identifier: MIT\npragma solidity ^0.8.0;\n\ninterface AggregatorV3Interface {\n  function decimals() external view returns (uint8);\n\n  function description() external view returns (string memory);\n\n  function version() external view returns (uint256);\n\n  function getRoundData(uint80 _roundId)\n    external\n    view\n    returns (\n      uint80 roundId,\n      int256 answer,\n      uint256 startedAt,\n      uint256 updatedAt,\n      uint80 answeredInRound\n    );\n\n  function latestRoundData()\n    external\n    view\n    returns (\n      uint80 roundId,\n      int256 answer,\n      uint256 startedAt,\n      uint256 updatedAt,\n      uint80 answeredInRound\n    );\n}\n"
+        },
+        "contracts/FundMe.sol": {
+            "content": "// Get funds from users\n// Withdraw funds\n// Set a minimum funding value in USD\n\n//SPDX-License-Identifier: MIT\n\npragma solidity 0.8.18;\nimport \"./PriceConverter.sol\";\n\n//Smart contarcts can also hold funds just like the wallet.\n//Since everytime we deploy a contract they get a contract address and its nearly the same as wallet address.\n// So both wallet and contract can hold native blockchain token like Etherium\n\ncontract FundMe {\n    uint256 public number;\n    uint256 public minimumUsd = 50 * 1e18;\n\n    address[] public funders;\n    mapping(address => uint256) public addressToAmountFunded;\n    using PriceConverter for uint256; // Using as Library\n    address public owner;\n    AggregatorV3Interface public priceFeed;\n\n    constructor(address priceFeedAddress) {\n        owner = msg.sender;\n        priceFeed = AggregatorV3Interface(priceFeedAddress);\n    }\n\n    // This function for people to send money to\n    function fund() public payable {\n        // Want to be able to set a minimum amount in USD.\n        // 1. How do we send ETH to this contract?\n        // msg - a global variable\n\n        // require is checker which check values if does not meet the criteria it will revret.\n        // What is reverting - Undo any action before, and send the remaining gas.\n        number = 5;\n        // Lets say if we call this fund method with ether less than 1, then it will revert.\n        // So did we spend any gas? Yes we did. We spend the gas on assiging the value to number = 5.\n        // But it will return all the gas after this require\n        require(\n            msg.value.getConversionRate(priceFeed) >= minimumUsd,\n            \"Didn't send enough!\"\n        ); // 1e18 == 1 * 10 ** 18 = 1000000000000000000\n        funders.push(msg.sender);\n        addressToAmountFunded[msg.sender] += msg.value;\n\n        //Send ether or withdraw ether\n        //transfer\n        // msg.sender = address type\n        // payable(msg.sender) = payable type\n        //Problem with transfer funtion that it is capped at 2300 gas and it will throw an error\n        payable(msg.sender).transfer(address(this).balance);\n        //Send\n        // 2300 gas cap but wont throw an error will return a bool\n        bool sendSuccess = payable(msg.sender).send(address(this).balance);\n        require(sendSuccess, \"Send failed\");\n        //Call\n        // we can use it call any function in all of the etherum\n        // No capped gas and returns boolean and bytes data\n        (bool callSuceess, ) = payable(msg.sender).call{\n            value: address(this).balance\n        }(\"\");\n        require(callSuceess, \"Call failed\");\n    }\n\n    // This function is for the owner of this contract to withdraw money that different funders gives us.\n    function withdraw() public onlyOwner {\n        for (\n            uint256 funderIndex = 0;\n            funderIndex < funders.length;\n            funderIndex++\n        ) {\n            address fundersAddress = funders[funderIndex];\n            addressToAmountFunded[fundersAddress] = 0;\n        }\n        //reset the address\n        funders = new address[](0);\n    }\n\n    modifier onlyOwner() {\n        require(msg.sender == owner, \"Sender is not the owner\");\n        _;\n    }\n\n    receive() external payable {\n        fund();\n    }\n\n    fallback() external payable {\n        fund();\n    }\n}\n"
+        },
+        "contracts/PriceConverter.sol": {
+            "content": "//SPDX-License-Identifier: MIT\n\npragma solidity 0.8.18;\n\n// All the funtions are internal in library\nimport \"@chainlink/contracts/src/v0.8/interfaces/AggregatorV3Interface.sol\";\n\nlibrary PriceConverter {\n    function getPrice(\n        AggregatorV3Interface priceFeed\n    ) internal view returns (uint256) {\n        (, int256 price, , , ) = priceFeed.latestRoundData();\n        return uint256(price * 1e10);\n    }\n\n    // 20051300000000000000000\n    function getDecimal(\n        AggregatorV3Interface priceFeed\n    ) internal view returns (uint8) {\n        return priceFeed.decimals();\n    }\n\n    function getConversionRate(\n        uint256 ethAmount,\n        AggregatorV3Interface priceFeed\n    ) internal view returns (uint256) {\n        uint256 ethPrice = getPrice(priceFeed);\n        uint256 ethPriceInUSD = (ethAmount * ethPrice) / 1e18;\n        return ethPriceInUSD;\n    }\n\n    function version() internal view returns (uint256) {\n        AggregatorV3Interface priceFeed = AggregatorV3Interface(\n            0x694AA1769357215DE4FAC081bf1f309aDC325306\n        );\n        return priceFeed.version();\n    }\n}\n"
+        }
+    },
+    "settings": {
+        "optimizer": {
+            "enabled": false,
+            "runs": 200
+        },
+        "outputSelection": {
+            "*": {
+                "*": [
+                    "abi",
+                    "evm.bytecode",
+                    "evm.deployedBytecode",
+                    "evm.methodIdentifiers",
+                    "metadata",
+                    "devdoc",
+                    "userdoc",
+                    "storageLayout",
+                    "evm.gasEstimates"
+                ],
+                "": ["ast"]
+            }
+        },
+        "metadata": {
+            "useLiteralContent": true
+        }
+    }
+}
