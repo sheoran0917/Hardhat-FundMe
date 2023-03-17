@@ -81,11 +81,11 @@ contract FundMe {
         // msg.sender = address type
         // payable(msg.sender) = payable type
         //Problem with transfer funtion that it is capped at 2300 gas and it will throw an error
-        payable(msg.sender).transfer(address(this).balance);
+        //payable(msg.sender).transfer(address(this).balance);
         //Send
         // 2300 gas cap but wont throw an error will return a bool
-        bool sendSuccess = payable(msg.sender).send(address(this).balance);
-        require(sendSuccess, "Send failed");
+        //  bool sendSuccess = payable(msg.sender).send(address(this).balance);
+        // require(sendSuccess, "Send failed");
         //Call
         // we can use it call any function in all of the etherum
         // No capped gas and returns boolean and bytes data
