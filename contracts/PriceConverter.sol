@@ -9,8 +9,9 @@ library PriceConverter {
     function getPrice(
         AggregatorV3Interface priceFeed
     ) internal view returns (uint256) {
-        (, int256 price, , , ) = priceFeed.latestRoundData();
-        return uint256(price * 1e10);
+        (, int256 answer, , , ) = priceFeed.latestRoundData();
+        // ETH/USD rate in 18 digit
+        return uint256(answer * 10000000000);
     }
 
     // 20051300000000000000000
@@ -25,8 +26,9 @@ library PriceConverter {
         AggregatorV3Interface priceFeed
     ) internal view returns (uint256) {
         uint256 ethPrice = getPrice(priceFeed);
-        uint256 ethPriceInUSD = (ethAmount * ethPrice) / 1e18;
-        return ethPriceInUSD;
+        uint256 ethAmountInUsd = (ethPrice * ethAmount) / 1000000000000000000;
+        // the actual ETH/USD conversation rate, after adjusting the extra 0s.
+        return ethAmountInUsd;
     }
 
     function version() internal view returns (uint256) {
